@@ -1,8 +1,8 @@
-import React from 'react';
 import { useStore } from '../store';
 import { formatCurrency } from '../lib/utils';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Wallet, Users, LayoutGrid, CheckCircle2, Briefcase } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronRight, faWallet, faUsers, faLayerGroup, faCheckCircle, faBriefcase } from '@fortawesome/free-solid-svg-icons';
 
 export default function Dashboard() {
   const { prospects, cards, transactions } = useStore();
@@ -17,46 +17,38 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-emerald-600 text-white rounded-2xl p-6 shadow-lg">
-        <h2 className="text-emerald-100 text-sm font-medium mb-1">Total Collecté</h2>
+      <div className="bg-blue-600 text-white rounded-xl p-5 shadow-sm">
+        <h2 className="text-blue-100 text-sm font-medium mb-1 uppercase tracking-wider">Total Collecté</h2>
         <p className="text-3xl font-bold tracking-tight">{formatCurrency(totalCollected)}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard icon={<Users className="text-blue-500" />} label="Prospects Actifs" value={activeProspects} />
-        <StatCard icon={<LayoutGrid className="text-amber-500" />} label="Cartes en cours" value={activeCards} />
-        <StatCard icon={<CheckCircle2 className="text-emerald-500" />} label="Cartes terminées" value={completedCards} />
-        <StatCard icon={<Wallet className="text-purple-500" />} label="Total Cartes" value={cards.length} />
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard icon={faUsers} iconColor="text-sky-500" label="Prospects Actifs" value={activeProspects} />
+        <StatCard icon={faLayerGroup} iconColor="text-amber-500" label="Cartes en cours" value={activeCards} />
+        <StatCard icon={faCheckCircle} iconColor="text-blue-500" label="Cartes terminées" value={completedCards} />
+        <StatCard icon={faWallet} iconColor="text-purple-500" label="Total Cartes" value={cards.length} />
       </div>
 
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-800">Actions Rapides</h3>
-        </div>
-        <div className="space-y-3">
-          <Link
-            to="/prospects"
-            className="flex items-center justify-between p-4 bg-white rounded-xl border border-neutral-200 shadow-sm hover:border-emerald-500 transition-colors"
-          >
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 px-1">Actions Rapides</h3>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 shadow-sm">
+          <Link to="/prospects" className="flex items-center justify-between p-4 active:bg-slate-50 transition-colors">
             <div className="flex items-center space-x-3">
-              <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600">
-                <Users size={20} />
+              <div className="bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center text-blue-600">
+                <FontAwesomeIcon icon={faUsers} />
               </div>
-              <span className="font-medium text-neutral-700">Gérer les prospects</span>
+              <span className="font-medium text-slate-700">Gérer les prospects</span>
             </div>
-            <ArrowRight size={20} className="text-neutral-400" />
+            <FontAwesomeIcon icon={faChevronRight} className="text-slate-300 text-sm" />
           </Link>
-          <Link
-            to="/services"
-            className="flex items-center justify-between p-4 bg-white rounded-xl border border-neutral-200 shadow-sm hover:border-emerald-500 transition-colors"
-          >
+          <Link to="/services" className="flex items-center justify-between p-4 active:bg-slate-50 transition-colors">
             <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
-                <Briefcase size={20} />
+              <div className="bg-sky-50 w-8 h-8 rounded-full flex items-center justify-center text-sky-600">
+                <FontAwesomeIcon icon={faBriefcase} />
               </div>
-              <span className="font-medium text-neutral-700">Gérer les services et banques</span>
+              <span className="font-medium text-slate-700">Services et banques</span>
             </div>
-            <ArrowRight size={20} className="text-neutral-400" />
+            <FontAwesomeIcon icon={faChevronRight} className="text-slate-300 text-sm" />
           </Link>
         </div>
       </div>
@@ -64,13 +56,13 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number | string }) {
+function StatCard({ icon, iconColor, label, value }: { icon: any; iconColor: string; label: string; value: number | string }) {
   return (
-    <div className="bg-white p-4 rounded-2xl border border-neutral-100 shadow-sm flex flex-col justify-between">
-      <div className="mb-3">{icon}</div>
+    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div className="mb-2"><FontAwesomeIcon icon={icon} className={iconColor} size="lg" /></div>
       <div>
-        <p className="text-2xl font-bold text-neutral-800">{value}</p>
-        <p className="text-xs text-neutral-500 font-medium mt-1">{label}</p>
+        <p className="text-2xl font-bold text-slate-800">{value}</p>
+        <p className="text-xs text-slate-500 font-medium mt-0.5">{label}</p>
       </div>
     </div>
   );

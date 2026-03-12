@@ -1,14 +1,32 @@
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { formatCurrency, cn } from '../lib/utils';
-import { ArrowLeft, CheckCircle2, Circle, Banknote, History, Undo2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faCheckCircle, faMoneyBillWave, faRotateLeft, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faCircle } from '@fortawesome/free-regular-svg-icons';
+import { format, eachDayOfInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function CardDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { cards, prospects, transactions, addInstallment, withdrawCard, removeInstallment } = useStore();
+  const { cards, prospects, transactions, addInstallment, withdrawCard, removeInstallment, deleteCard } = useStore();
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const card = cards.find((c) => c.id === id);
   const prospect = prospects.find((p) => p.id === card?.prospectId);
@@ -19,8 +37,8 @@ export default function CardDetail() {
   if (!card || !prospect) {
     return (
       <div className="text-center py-10">
-        <p className="text-neutral-500">Carte introuvable.</p>
-        <button onClick={() => navigate(-1)} className="text-emerald-600 font-medium mt-4 inline-block">
+        <p className="text-slate-500">Carte introuvable.</p>
+        <button onClick={() => navigate(-1)} className="text-blue-600 font-medium mt-4 inline-block">
           Retour
         </button>
       </div>
@@ -33,6 +51,28 @@ export default function CardDetail() {
   const totalAmount = card.totalSlots * card.installmentAmount;
   const currentAmount = card.filledSlots * card.installmentAmount;
 
+  // Generate chart data
+  const startDate = startOfDay(card.createdAt);
+  const endDate = endOfDay(Date.now());
+  let chartDays = eachDayOfInterval({ start: startDate, end: endDate });
+  
+  // Limit to last 30 days to avoid overcrowding the chart
+  if (chartDays.length > 30) {
+    chartDays = chartDays.slice(-30);
+  }
+
+  const chartData = chartDays.map((day) => {
+    const dayTransactions = cardTransactions.filter(
+      (tx) => tx.type === 'installment' && isSameDay(tx.date, day)
+    );
+    const amount = dayTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    return {
+      date: format(day, 'dd/MM'),
+      amount,
+      fullDate: format(day, 'd MMMM yyyy', { locale: fr }),
+    };
+  });
+
   const handleAddInstallment = () => {
     if (isActive && card.filledSlots < card.totalSlots) {
       addInstallment(card.id);
@@ -41,137 +81,165 @@ export default function CardDetail() {
 
   const handleWithdraw = () => {
     if (isCompleted) {
-      if (window.confirm(`Confirmer le retrait de ${formatCurrency(totalAmount)} pour ${prospect.name} ?`)) {
-        withdrawCard(card.id);
-      }
+      setConfirmModal({
+        isOpen: true,
+        title: 'Retirer la carte',
+        message: `Confirmer le retrait de ${formatCurrency(totalAmount)} pour ${prospect.name} ?`,
+        onConfirm: () => withdrawCard(card.id),
+      });
     }
   };
 
   const handleRemoveInstallment = () => {
     if ((isActive || isCompleted) && card.filledSlots > 0) {
-      if (window.confirm('Êtes-vous sûr de vouloir annuler le dernier pointage ?')) {
-        removeInstallment(card.id);
-      }
+      setConfirmModal({
+        isOpen: true,
+        title: 'Annuler le pointage',
+        message: 'Êtes-vous sûr de vouloir annuler le dernier pointage ?',
+        isDestructive: true,
+        onConfirm: () => removeInstallment(card.id),
+      });
     }
   };
 
+  const handleDeleteCard = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer la carte',
+      message: 'Êtes-vous sûr de vouloir supprimer cette carte d\'épargne et tout son historique ? Cette action est irréversible.',
+      isDestructive: true,
+      onConfirm: () => {
+        deleteCard(card.id);
+        navigate(-1);
+      },
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm text-neutral-600 hover:text-emerald-600 transition-colors">
-          <ArrowLeft size={20} />
+    <div className="space-y-6 pb-24">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => navigate(-1)} className="text-blue-600 p-2 -ml-2 active:opacity-70 transition-opacity flex items-center">
+          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+          <span className="font-medium">Retour</span>
         </button>
-        <div>
-          <h2 className="text-2xl font-bold text-neutral-800">{card.objective}</h2>
-          <p className="text-sm text-neutral-500 font-medium">{prospect.name}</p>
-        </div>
+        <button onClick={handleDeleteCard} className="text-red-500 p-2 -mr-2 active:opacity-70 transition-opacity">
+          <FontAwesomeIcon icon={faTrash} />
+        </button>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl border border-neutral-200 shadow-sm relative overflow-hidden">
+      <div className="px-1">
+        <h2 className="text-2xl font-bold text-slate-900">{card.objective}</h2>
+        <p className="text-sm text-slate-500 font-medium mt-1">{prospect.name}</p>
+      </div>
+
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
         {isWithdrawn && (
-          <div className="absolute top-4 right-4 bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-4 right-4 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
             Retirée
           </div>
         )}
         {isCompleted && (
-          <div className="absolute top-4 right-4 bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
             Terminée
           </div>
         )}
 
         <div className="mb-6">
-          <p className="text-sm text-neutral-500 mb-1">Objectif Total</p>
-          <p className="text-4xl font-black text-neutral-800 tracking-tight">{formatCurrency(totalAmount)}</p>
-          <p className="text-sm font-medium text-emerald-600 mt-2">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1 font-semibold">Objectif Total</p>
+          <p className="text-3xl font-black text-slate-800 tracking-tight">{formatCurrency(totalAmount)}</p>
+          <p className="text-sm font-medium text-blue-600 mt-1">
             Épargné : {formatCurrency(currentAmount)}
           </p>
         </div>
 
-        <div className="mb-8">
-          <div className="flex justify-between text-sm font-medium mb-2">
-            <span className="text-neutral-600">Progression</span>
-            <span className="text-neutral-800">{card.filledSlots} / {card.totalSlots}</span>
+        <div className="mb-2">
+          <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-3 text-slate-500">
+            <span>Progression</span>
+            <span className="text-slate-800">{card.filledSlots} / {card.totalSlots}</span>
           </div>
-          <div className="grid grid-cols-10 gap-1 sm:gap-2">
+          <div className="grid grid-cols-10 gap-1 sm:gap-1.5">
             {Array.from({ length: card.totalSlots }).map((_, index) => {
               const isFilled = index < card.filledSlots;
               return (
                 <div
                   key={index}
                   className={cn(
-                    "aspect-square rounded-md flex items-center justify-center transition-all duration-300",
-                    isFilled ? "bg-emerald-500 text-white shadow-sm" : "bg-neutral-100 border border-neutral-200 text-neutral-300"
+                    "aspect-square rounded flex items-center justify-center transition-all duration-300",
+                    isFilled ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-300"
                   )}
                 >
-                  {isFilled ? <CheckCircle2 size={16} /> : <Circle size={16} strokeWidth={1.5} />}
+                  {isFilled ? <FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /> : <FontAwesomeIcon icon={faCircle} className="text-[10px]" />}
                 </div>
               );
             })}
           </div>
         </div>
-
-        {isActive && (
-          <button
-            onClick={handleAddInstallment}
-            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-md flex items-center justify-center"
-          >
-            <Banknote className="mr-2" />
-            Pointer {formatCurrency(card.installmentAmount)}
-          </button>
-        )}
-
-        {isCompleted && (
-          <button
-            onClick={handleWithdraw}
-            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all shadow-md flex items-center justify-center animate-pulse"
-          >
-            <Banknote className="mr-2" />
-            Retirer {formatCurrency(totalAmount)}
-          </button>
-        )}
-
-        {(isActive || isCompleted) && card.filledSlots > 0 && (
-          <button
-            onClick={handleRemoveInstallment}
-            className="w-full mt-3 py-3 bg-red-50 text-red-600 rounded-2xl font-semibold text-base hover:bg-red-100 active:scale-[0.98] transition-all flex items-center justify-center border border-red-200"
-          >
-            <Undo2 className="mr-2" size={20} />
-            Annuler le dernier pointage
-          </button>
-        )}
       </div>
 
-      <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-neutral-800 mb-4 flex items-center">
-          <History className="mr-2 text-neutral-500" size={20} />
-          Historique
-        </h3>
+      <div className="px-1">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Activité (30 derniers jours)</h3>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="date" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#94a3b8' }} 
+                dy={10}
+                minTickGap={15}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#94a3b8' }} 
+                tickFormatter={(value) => value > 0 ? `${value}` : ''}
+              />
+              <Tooltip 
+                cursor={{ fill: '#f8fafc' }}
+                contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                labelFormatter={(_, payload) => payload[0]?.payload.fullDate || ''}
+                formatter={(value: number) => [`${formatCurrency(value)}`, 'Épargné']}
+                labelStyle={{ color: '#64748b', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}
+                itemStyle={{ color: '#3b82f6', fontSize: '14px', fontWeight: 700 }}
+              />
+              <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="px-1">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Historique</h3>
         
         {cardTransactions.length === 0 ? (
-          <p className="text-neutral-500 text-sm italic text-center py-4">Aucune transaction.</p>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
+            <p className="text-slate-400 text-sm">Aucune transaction.</p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 shadow-sm">
             {cardTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+              <div key={tx.id} className="flex items-center justify-between p-3">
                 <div className="flex items-center space-x-3">
                   <div className={cn(
-                    "p-2 rounded-lg",
-                    tx.type === 'installment' ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
+                    "w-8 h-8 rounded-full flex items-center justify-center",
+                    tx.type === 'installment' ? "bg-blue-50 text-blue-600" : "bg-sky-50 text-sky-600"
                   )}>
-                    <Banknote size={18} />
+                    <FontAwesomeIcon icon={faMoneyBillWave} className="text-sm" />
                   </div>
                   <div>
-                    <p className="font-medium text-neutral-800 text-sm">
+                    <p className="font-medium text-slate-800 text-sm">
                       {tx.type === 'installment' ? 'Versement' : 'Retrait'}
                     </p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-slate-500">
                       {format(tx.date, "d MMM yyyy 'à' HH:mm", { locale: fr })}
                     </p>
                   </div>
                 </div>
                 <span className={cn(
-                  "font-bold",
-                  tx.type === 'installment' ? "text-emerald-600" : "text-blue-600"
+                  "font-bold text-sm",
+                  tx.type === 'installment' ? "text-blue-600" : "text-sky-600"
                 )}>
                   {tx.type === 'installment' ? '+' : '-'}{formatCurrency(tx.amount)}
                 </span>
@@ -180,6 +248,48 @@ export default function CardDetail() {
           </div>
         )}
       </div>
+
+      {/* Fixed Bottom Actions */}
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white border-t border-slate-200 z-20 max-w-md mx-auto">
+        {isActive && (
+          <button
+            onClick={handleAddInstallment}
+            className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-base hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center"
+          >
+            <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
+            Pointer {formatCurrency(card.installmentAmount)}
+          </button>
+        )}
+
+        {isCompleted && (
+          <button
+            onClick={handleWithdraw}
+            className="w-full py-3.5 bg-sky-600 text-white rounded-xl font-bold text-base hover:bg-sky-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center"
+          >
+            <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
+            Retirer {formatCurrency(totalAmount)}
+          </button>
+        )}
+
+        {(isActive || isCompleted) && card.filledSlots > 0 && (
+          <button
+            onClick={handleRemoveInstallment}
+            className="w-full mt-2 py-2.5 bg-slate-50 text-red-500 rounded-xl font-semibold text-sm active:bg-slate-100 transition-all flex items-center justify-center border border-slate-200"
+          >
+            <FontAwesomeIcon icon={faRotateLeft} className="mr-2" />
+            Annuler le dernier pointage
+          </button>
+        )}
+      </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        isDestructive={confirmModal.isDestructive}
+      />
     </div>
   );
 }

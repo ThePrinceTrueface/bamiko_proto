@@ -37,6 +37,9 @@ interface AppState {
   removeInstallment: (cardId: string) => void;
   withdrawCard: (cardId: string) => void;
   deleteProspect: (id: string) => void;
+  deleteCard: (id: string) => void;
+  deleteService: (id: string) => void;
+  deleteBank: (id: string) => void;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -161,6 +164,45 @@ export const useStore = create<AppState>()(
           return {
             prospects: state.prospects.filter((p) => p.id !== id),
             cards: state.cards.filter((c) => c.prospectId !== id),
+            transactions: state.transactions.filter((t) => !cardIds.includes(t.cardId)),
+          };
+        }),
+
+      deleteCard: (id) =>
+        set((state) => ({
+          cards: state.cards.filter((c) => c.id !== id),
+          transactions: state.transactions.filter((t) => t.cardId !== id),
+        })),
+
+      deleteService: (id) =>
+        set((state) => {
+          const serviceBanks = state.banks.filter((b) => b.serviceId === id);
+          const bankIds = serviceBanks.map((b) => b.id);
+          const serviceProspects = state.prospects.filter((p) => bankIds.includes(p.bankId));
+          const prospectIds = serviceProspects.map((p) => p.id);
+          const serviceCards = state.cards.filter((c) => prospectIds.includes(c.prospectId));
+          const cardIds = serviceCards.map((c) => c.id);
+
+          return {
+            services: state.services.filter((s) => s.id !== id),
+            banks: state.banks.filter((b) => b.serviceId !== id),
+            prospects: state.prospects.filter((p) => !bankIds.includes(p.bankId)),
+            cards: state.cards.filter((c) => !prospectIds.includes(c.prospectId)),
+            transactions: state.transactions.filter((t) => !cardIds.includes(t.cardId)),
+          };
+        }),
+
+      deleteBank: (id) =>
+        set((state) => {
+          const bankProspects = state.prospects.filter((p) => p.bankId === id);
+          const prospectIds = bankProspects.map((p) => p.id);
+          const bankCards = state.cards.filter((c) => prospectIds.includes(c.prospectId));
+          const cardIds = bankCards.map((c) => c.id);
+
+          return {
+            banks: state.banks.filter((b) => b.id !== id),
+            prospects: state.prospects.filter((p) => p.bankId !== id),
+            cards: state.cards.filter((c) => !prospectIds.includes(c.prospectId)),
             transactions: state.transactions.filter((t) => !cardIds.includes(t.cardId)),
           };
         }),

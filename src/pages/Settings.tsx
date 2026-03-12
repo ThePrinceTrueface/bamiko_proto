@@ -1,8 +1,24 @@
+import React, { useState } from 'react';
 import { useStore } from '../store';
-import { AlertTriangle, Download, Trash2 } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExclamationTriangle, faDownload, faTrash } from '@fortawesome/free-solid-svg-icons';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Settings() {
   const { services, banks, prospects, cards, transactions } = useStore();
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const handleExport = () => {
     const data = {
@@ -25,55 +41,72 @@ export default function Settings() {
   };
 
   const handleClearData = () => {
-    if (
-      window.confirm(
-        'ATTENTION : Vous êtes sur le point de supprimer TOUTES les données de l\'application. Cette action est irréversible. Voulez-vous continuer ?'
-      )
-    ) {
-      if (window.confirm('Êtes-vous VRAIMENT sûr ? Tapez OK pour confirmer.')) {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Effacer toutes les données',
+      message: 'ATTENTION : Vous êtes sur le point de supprimer TOUTES les données de l\'application. Cette action est irréversible. Voulez-vous continuer ?',
+      isDestructive: true,
+      onConfirm: () => {
         localStorage.removeItem('bamiko-storage');
         window.location.reload();
-      }
-    }
+      },
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-neutral-800">Paramètres</h2>
+    <div className="space-y-6 pb-16">
+      <h2 className="text-2xl font-bold text-slate-900 px-1">Paramètres</h2>
 
-      <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm space-y-4">
-        <h3 className="text-lg font-semibold text-neutral-800 flex items-center">
-          <Download className="mr-2 text-blue-600" size={20} />
-          Sauvegarde des données
-        </h3>
-        <p className="text-sm text-neutral-600">
-          Téléchargez une copie de toutes vos données (services, banques, prospects, cartes, transactions) au format JSON.
-        </p>
-        <button
-          onClick={handleExport}
-          className="flex items-center justify-center w-full py-3 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors border border-blue-200"
-        >
-          <Download className="mr-2" size={20} />
-          Exporter les données
-        </button>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100">
+          <h3 className="text-sm font-semibold text-slate-800 flex items-center uppercase tracking-wider">
+            <FontAwesomeIcon icon={faDownload} className="mr-2 text-blue-600" />
+            Sauvegarde
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Téléchargez une copie de toutes vos données au format JSON.
+          </p>
+        </div>
+        <div className="p-4 bg-slate-50">
+          <button
+            onClick={handleExport}
+            className="w-full py-2.5 bg-white text-blue-600 rounded-lg font-medium border border-slate-200 shadow-sm active:bg-slate-50 transition-colors flex items-center justify-center text-sm"
+          >
+            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+            Exporter les données
+          </button>
+        </div>
       </div>
 
-      <div className="bg-red-50 p-5 rounded-2xl border border-red-200 shadow-sm space-y-4">
-        <h3 className="text-lg font-semibold text-red-800 flex items-center">
-          <AlertTriangle className="mr-2 text-red-600" size={20} />
-          Zone Dangereuse
-        </h3>
-        <p className="text-sm text-red-600">
-          La suppression des données effacera définitivement tout l'historique de l'application sur cet appareil.
-        </p>
-        <button
-          onClick={handleClearData}
-          className="flex items-center justify-center w-full py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors shadow-sm"
-        >
-          <Trash2 className="mr-2" size={20} />
-          Effacer toutes les données
-        </button>
+      <div className="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-red-100 bg-red-50">
+          <h3 className="text-sm font-semibold text-red-800 flex items-center uppercase tracking-wider">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 text-red-600" />
+            Zone Dangereuse
+          </h3>
+          <p className="text-xs text-red-600 mt-1">
+            La suppression des données effacera définitivement tout l'historique sur cet appareil.
+          </p>
+        </div>
+        <div className="p-4">
+          <button
+            onClick={handleClearData}
+            className="w-full py-2.5 bg-red-600 text-white rounded-lg font-medium shadow-sm active:bg-red-700 transition-colors flex items-center justify-center text-sm"
+          >
+            <FontAwesomeIcon icon={faTrash} className="mr-2" />
+            Effacer toutes les données
+          </button>
+        </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        isDestructive={confirmModal.isDestructive}
+      />
     </div>
   );
 }

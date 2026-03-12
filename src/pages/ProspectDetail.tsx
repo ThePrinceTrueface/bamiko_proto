@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { formatCurrency, cn } from '../lib/utils';
-import { ArrowLeft, Plus, CreditCard, Trash2, AlertCircle } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faPlus, faTrash, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function ProspectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -16,12 +18,25 @@ export default function ProspectDetail() {
   const [objective, setObjective] = useState('');
   const [installmentAmount, setInstallmentAmount] = useState('');
   const [totalSlots, setTotalSlots] = useState('30');
+  
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   if (!prospect) {
     return (
       <div className="text-center py-10">
-        <p className="text-neutral-500">Prospect introuvable.</p>
-        <Link to="/prospects" className="text-emerald-600 font-medium mt-4 inline-block">
+        <p className="text-slate-500">Prospect introuvable.</p>
+        <Link to="/prospects" className="text-blue-600 font-medium mt-4 inline-block">
           Retour aux prospects
         </Link>
       </div>
@@ -43,159 +58,173 @@ export default function ProspectDetail() {
   };
 
   const handleDelete = () => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce prospect et toutes ses cartes ? Cette action est irréversible.')) {
-      deleteProspect(prospect.id);
-      navigate('/prospects');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Supprimer le prospect',
+      message: 'Êtes-vous sûr de vouloir supprimer ce prospect et toutes ses cartes ? Cette action est irréversible.',
+      isDestructive: true,
+      onConfirm: () => {
+        deleteProspect(prospect.id);
+        navigate('/prospects');
+      },
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm text-neutral-600 hover:text-emerald-600 transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="text-2xl font-bold text-neutral-800">{prospect.name}</h2>
-        </div>
-        <button onClick={handleDelete} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors">
-          <Trash2 size={20} />
+    <div className="space-y-4 pb-16">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => navigate(-1)} className="text-blue-600 p-2 -ml-2 active:opacity-70 transition-opacity flex items-center">
+          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+          <span className="font-medium">Retour</span>
+        </button>
+        <button onClick={handleDelete} className="text-red-500 p-2 -mr-2 active:opacity-70 transition-opacity">
+          <FontAwesomeIcon icon={faTrash} />
         </button>
       </div>
 
-      <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-800 flex items-center">
-            <CreditCard className="mr-2 text-emerald-600" size={20} />
-            Cartes d'épargne
-          </h3>
-          <button
-            onClick={() => setIsAddingCard(!isAddingCard)}
-            className="bg-emerald-100 text-emerald-700 p-2 rounded-xl hover:bg-emerald-200 transition-colors"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
+      <div className="px-1">
+        <h2 className="text-2xl font-bold text-slate-900">{prospect.name}</h2>
+        <p className="text-sm text-slate-500 mt-1">{prospect.phone || 'Aucun numéro'}</p>
+      </div>
 
-        {isAddingCard && (
-          <form onSubmit={handleAddCard} className="mb-6 p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-4 animate-in fade-in slide-in-from-top-2">
+      <div className="flex items-center justify-between mt-6 mb-2 px-1">
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Cartes d'épargne</h3>
+        <button
+          onClick={() => setIsAddingCard(!isAddingCard)}
+          className="text-blue-600 font-medium text-sm active:opacity-70"
+        >
+          <FontAwesomeIcon icon={faPlus} className="mr-1" />
+          Ajouter
+        </button>
+      </div>
+
+      {isAddingCard && (
+        <form onSubmit={handleAddCard} className="mb-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Objectif</label>
+            <input
+              type="text"
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              placeholder="Ex: Commerce, Loyer..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Objectif</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Montant / case</label>
               <input
-                type="text"
-                value={objective}
-                onChange={(e) => setObjective(e.target.value)}
-                placeholder="Ex: Commerce, Loyer..."
-                className="w-full px-4 py-2 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                type="number"
+                value={installmentAmount}
+                onChange={(e) => setInstallmentAmount(e.target.value)}
+                placeholder="Ex: 500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 required
+                min="100"
+                step="100"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Montant / case (FCFA)</label>
-                <input
-                  type="number"
-                  value={installmentAmount}
-                  onChange={(e) => setInstallmentAmount(e.target.value)}
-                  placeholder="Ex: 500"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                  required
-                  min="100"
-                  step="100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre de cases</label>
-                <input
-                  type="number"
-                  value={totalSlots}
-                  onChange={(e) => setTotalSlots(e.target.value)}
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                  required
-                  min="1"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Nb. de cases</label>
+              <input
+                type="number"
+                value={totalSlots}
+                onChange={(e) => setTotalSlots(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                required
+                min="1"
+              />
             </div>
-            <div className="flex justify-end space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsAddingCard(false)}
-                className="px-4 py-2 text-neutral-600 hover:bg-neutral-200 rounded-xl font-medium transition-colors"
+          </div>
+          <div className="flex justify-end space-x-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddingCard(false)}
+              className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={!objective.trim() || !installmentAmount || !totalSlots}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              Créer
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {prospectCards.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 bg-white rounded-xl border border-slate-200">
+            <FontAwesomeIcon icon={faExclamationCircle} className="text-3xl mb-2 opacity-30" />
+            <p className="text-sm">Aucune carte d'épargne.</p>
+          </div>
+        ) : (
+          prospectCards.map((card) => {
+            const progress = (card.filledSlots / card.totalSlots) * 100;
+            const isCompleted = card.status === 'completed';
+            const isWithdrawn = card.status === 'withdrawn';
+
+            return (
+              <Link
+                key={card.id}
+                to={`/cards/${card.id}`}
+                className={cn(
+                  "block p-4 rounded-xl border transition-colors relative overflow-hidden",
+                  isWithdrawn ? "bg-slate-50 border-slate-200 opacity-75" :
+                  isCompleted ? "bg-blue-50 border-blue-200" :
+                  "bg-white border-slate-200 shadow-sm active:bg-slate-50"
+                )}
               >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={!objective.trim() || !installmentAmount || !totalSlots}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-              >
-                Créer la carte
-              </button>
-            </div>
-          </form>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-semibold text-slate-800 text-sm">{card.objective}</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatCurrency(card.installmentAmount)} / case
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-md",
+                    isWithdrawn ? "bg-slate-200 text-slate-600" :
+                    isCompleted ? "bg-blue-200 text-blue-800" :
+                    "bg-sky-100 text-sky-700"
+                  )}>
+                    {isWithdrawn ? 'Retirée' : isCompleted ? 'Terminée' : 'En cours'}
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs font-medium mb-1.5">
+                    <span className="text-slate-600">{card.filledSlots} / {card.totalSlots} cases</span>
+                    <span className="text-slate-800">{formatCurrency(card.filledSlots * card.installmentAmount)}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-1.5 rounded-full transition-all duration-500",
+                        isCompleted || isWithdrawn ? "bg-blue-500" : "bg-sky-500"
+                      )}
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })
         )}
-
-        <div className="space-y-3">
-          {prospectCards.length === 0 ? (
-            <div className="text-center py-6 text-neutral-500 flex flex-col items-center">
-              <AlertCircle size={32} className="mb-2 opacity-50" />
-              <p className="text-sm">Aucune carte d'épargne.</p>
-            </div>
-          ) : (
-            prospectCards.map((card) => {
-              const progress = (card.filledSlots / card.totalSlots) * 100;
-              const isCompleted = card.status === 'completed';
-              const isWithdrawn = card.status === 'withdrawn';
-
-              return (
-                <Link
-                  key={card.id}
-                  to={`/cards/${card.id}`}
-                  className={cn(
-                    "block p-4 rounded-xl border transition-colors relative overflow-hidden",
-                    isWithdrawn ? "bg-neutral-50 border-neutral-200 opacity-75" :
-                    isCompleted ? "bg-emerald-50 border-emerald-200 hover:border-emerald-400" :
-                    "bg-white border-neutral-200 shadow-sm hover:border-emerald-400"
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-neutral-800">{card.objective}</h4>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {formatCurrency(card.installmentAmount)} / case
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "text-xs font-bold px-2 py-1 rounded-full",
-                      isWithdrawn ? "bg-neutral-200 text-neutral-600" :
-                      isCompleted ? "bg-emerald-200 text-emerald-800" :
-                      "bg-blue-100 text-blue-700"
-                    )}>
-                      {isWithdrawn ? 'Retirée' : isCompleted ? 'Terminée' : 'En cours'}
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs font-medium mb-1">
-                      <span className="text-neutral-600">{card.filledSlots} / {card.totalSlots} cases</span>
-                      <span className="text-neutral-800">{formatCurrency(card.filledSlots * card.installmentAmount)}</span>
-                    </div>
-                    <div className="w-full bg-neutral-100 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-2 rounded-full transition-all duration-500",
-                          isCompleted || isWithdrawn ? "bg-emerald-500" : "bg-blue-500"
-                        )}
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })
-          )}
-        </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        isDestructive={confirmModal.isDestructive}
+      />
     </div>
   );
 }
