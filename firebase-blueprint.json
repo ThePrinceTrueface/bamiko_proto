@@ -1,0 +1,21 @@
+{
+  "entities": {
+    "UserBackup": {
+      "title": "User Backup",
+      "description": "Stores the user's application state backup",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "data": { "type": "string", "description": "JSON stringified state" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["uid", "data", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserBackup",
+      "description": "User's backup data"
+    }
+  }
+}

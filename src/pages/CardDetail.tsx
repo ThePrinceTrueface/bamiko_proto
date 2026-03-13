@@ -37,8 +37,8 @@ export default function CardDetail() {
   if (!card || !prospect) {
     return (
       <div className="text-center py-10">
-        <p className="text-slate-500">Carte introuvable.</p>
-        <button onClick={() => navigate(-1)} className="text-blue-600 font-medium mt-4 inline-block">
+        <p className="text-slate-500 dark:text-slate-400">Carte introuvable.</p>
+        <button onClick={() => navigate(-1)} className="text-blue-600 dark:text-blue-400 font-medium mt-4 inline-block">
           Retour
         </button>
       </div>
@@ -50,6 +50,16 @@ export default function CardDetail() {
   const isActive = card.status === 'active';
   const totalAmount = card.totalSlots * card.installmentAmount;
   const currentAmount = card.filledSlots * card.installmentAmount;
+  
+  const { settings } = useStore();
+  
+  let commissionAmount = 0;
+  if (settings?.commissionType === 'percentage') {
+    commissionAmount = (totalAmount * (settings.commissionValue || 0)) / 100;
+  } else {
+    commissionAmount = (settings?.commissionValue || 0) * card.installmentAmount;
+  }
+  const clientAmount = totalAmount - commissionAmount;
 
   // Generate chart data
   const startDate = startOfDay(card.createdAt);
@@ -84,8 +94,8 @@ export default function CardDetail() {
       setConfirmModal({
         isOpen: true,
         title: 'Retirer la carte',
-        message: `Confirmer le retrait de ${formatCurrency(totalAmount)} pour ${prospect.name} ?`,
-        onConfirm: () => withdrawCard(card.id),
+        message: `Confirmer le retrait pour ${prospect.name} ?\n\nMontant total : ${formatCurrency(totalAmount)}\nCommission : ${formatCurrency(commissionAmount)}\nÀ remettre au client : ${formatCurrency(clientAmount)}`,
+        onConfirm: () => withdrawCard(card.id, commissionAmount),
       });
     }
   };
@@ -118,7 +128,7 @@ export default function CardDetail() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between mb-2">
-        <button onClick={() => navigate(-1)} className="text-blue-600 p-2 -ml-2 active:opacity-70 transition-opacity flex items-center">
+        <button onClick={() => navigate(-1)} className="text-blue-600 dark:text-blue-400 p-2 -ml-2 active:opacity-70 transition-opacity flex items-center">
           <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
           <span className="font-medium">Retour</span>
         </button>
@@ -128,34 +138,46 @@ export default function CardDetail() {
       </div>
 
       <div className="px-1">
-        <h2 className="text-2xl font-bold text-slate-900">{card.objective}</h2>
-        <p className="text-sm text-slate-500 font-medium mt-1">{prospect.name}</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{card.objective}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">{prospect.name}</p>
       </div>
 
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden">
         {isWithdrawn && (
-          <div className="absolute top-4 right-4 bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
+          <div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
             Retirée
           </div>
         )}
         {isCompleted && (
-          <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
+          <div className="absolute top-4 right-4 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">
             Terminée
           </div>
         )}
 
         <div className="mb-6">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1 font-semibold">Objectif Total</p>
-          <p className="text-3xl font-black text-slate-800 tracking-tight">{formatCurrency(totalAmount)}</p>
-          <p className="text-sm font-medium text-blue-600 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 font-semibold">Objectif Total</p>
+          <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{formatCurrency(totalAmount)}</p>
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1">
             Épargné : {formatCurrency(currentAmount)}
           </p>
+          {isWithdrawn && card.commissionAmount !== undefined && (
+            <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-500 dark:text-slate-400">Remis au client</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(totalAmount - card.commissionAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Commission</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(card.commissionAmount)}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-2">
-          <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-3 text-slate-500">
+          <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-3 text-slate-500 dark:text-slate-400">
             <span>Progression</span>
-            <span className="text-slate-800">{card.filledSlots} / {card.totalSlots}</span>
+            <span className="text-slate-800 dark:text-slate-200">{card.filledSlots} / {card.totalSlots}</span>
           </div>
           <div className="grid grid-cols-10 gap-1 sm:gap-1.5">
             {Array.from({ length: card.totalSlots }).map((_, index) => {
@@ -165,7 +187,7 @@ export default function CardDetail() {
                   key={index}
                   className={cn(
                     "aspect-square rounded flex items-center justify-center transition-all duration-300",
-                    isFilled ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-300"
+                    isFilled ? "bg-blue-500 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-300 dark:text-slate-600"
                   )}
                 >
                   {isFilled ? <FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" /> : <FontAwesomeIcon icon={faCircle} className="text-[10px]" />}
@@ -177,11 +199,11 @@ export default function CardDetail() {
       </div>
 
       <div className="px-1">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Activité (30 derniers jours)</h3>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm h-56">
+        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Activité (30 derniers jours)</h3>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={settings?.darkMode ? '#334155' : '#f1f5f9'} />
               <XAxis 
                 dataKey="date" 
                 axisLine={false} 
@@ -197,8 +219,13 @@ export default function CardDetail() {
                 tickFormatter={(value) => value > 0 ? `${value}` : ''}
               />
               <Tooltip 
-                cursor={{ fill: '#f8fafc' }}
-                contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                cursor={{ fill: settings?.darkMode ? '#1e293b' : '#f8fafc' }}
+                contentStyle={{ 
+                  borderRadius: '12px', 
+                  border: `1px solid ${settings?.darkMode ? '#334155' : '#e2e8f0'}`, 
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                  backgroundColor: settings?.darkMode ? '#0f172a' : '#ffffff'
+                }}
                 labelFormatter={(_, payload) => payload[0]?.payload.fullDate || ''}
                 formatter={(value: number) => [`${formatCurrency(value)}`, 'Épargné']}
                 labelStyle={{ color: '#64748b', marginBottom: '4px', fontSize: '12px', fontWeight: 600 }}
@@ -211,35 +238,35 @@ export default function CardDetail() {
       </div>
 
       <div className="px-1">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Historique</h3>
+        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Historique</h3>
         
         {cardTransactions.length === 0 ? (
-          <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
-            <p className="text-slate-400 text-sm">Aucune transaction.</p>
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+            <p className="text-slate-400 dark:text-slate-500 text-sm">Aucune transaction.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700 shadow-sm">
             {cardTransactions.map((tx) => (
               <div key={tx.id} className="flex items-center justify-between p-3">
                 <div className="flex items-center space-x-3">
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center",
-                    tx.type === 'installment' ? "bg-blue-50 text-blue-600" : "bg-sky-50 text-sky-600"
+                    tx.type === 'installment' ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" : "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400"
                   )}>
                     <FontAwesomeIcon icon={faMoneyBillWave} className="text-sm" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-800 text-sm">
+                    <p className="font-medium text-slate-800 dark:text-white text-sm">
                       {tx.type === 'installment' ? 'Versement' : 'Retrait'}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {format(tx.date, "d MMM yyyy 'à' HH:mm", { locale: fr })}
                     </p>
                   </div>
                 </div>
                 <span className={cn(
                   "font-bold text-sm",
-                  tx.type === 'installment' ? "text-blue-600" : "text-sky-600"
+                  tx.type === 'installment' ? "text-blue-600 dark:text-blue-400" : "text-sky-600 dark:text-sky-400"
                 )}>
                   {tx.type === 'installment' ? '+' : '-'}{formatCurrency(tx.amount)}
                 </span>
@@ -249,12 +276,12 @@ export default function CardDetail() {
         )}
       </div>
 
-      {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white border-t border-slate-200 z-20 max-w-md mx-auto">
+      {/* Actions */}
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-20 max-w-md mx-auto transition-colors duration-200 md:relative md:bottom-auto md:p-0 md:bg-transparent md:dark:bg-transparent md:border-none md:max-w-none md:mt-6 md:flex md:gap-4">
         {isActive && (
           <button
             onClick={handleAddInstallment}
-            className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-base hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center"
+            className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-base hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center md:flex-1"
           >
             <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
             Pointer {formatCurrency(card.installmentAmount)}
@@ -264,7 +291,7 @@ export default function CardDetail() {
         {isCompleted && (
           <button
             onClick={handleWithdraw}
-            className="w-full py-3.5 bg-sky-600 text-white rounded-xl font-bold text-base hover:bg-sky-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center"
+            className="w-full py-3.5 bg-sky-600 text-white rounded-xl font-bold text-base hover:bg-sky-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center md:flex-1"
           >
             <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
             Retirer {formatCurrency(totalAmount)}
@@ -274,7 +301,7 @@ export default function CardDetail() {
         {(isActive || isCompleted) && card.filledSlots > 0 && (
           <button
             onClick={handleRemoveInstallment}
-            className="w-full mt-2 py-2.5 bg-slate-50 text-red-500 rounded-xl font-semibold text-sm active:bg-slate-100 transition-all flex items-center justify-center border border-slate-200"
+            className="w-full mt-2 py-2.5 bg-slate-50 dark:bg-slate-700 text-red-500 dark:text-red-400 rounded-xl font-semibold text-sm active:bg-slate-100 dark:active:bg-slate-600 transition-all flex items-center justify-center border border-slate-200 dark:border-slate-600 md:mt-0 md:flex-1 md:py-3.5"
           >
             <FontAwesomeIcon icon={faRotateLeft} className="mr-2" />
             Annuler le dernier pointage
