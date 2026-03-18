@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faUsers, faBuilding, faCog, faWallet } from '@fortawesome/free-solid-svg-icons';
+import TitleBar from './TitleBar';
 
 export default function Layout() {
   const location = useLocation();
@@ -13,11 +14,16 @@ export default function Layout() {
   };
   const currentTitle = titles[location.pathname] || 'Bamiko';
 
+  const platform = import.meta.env.VITE_PLATFORM;
+  const isWindows = platform !== 'mobile' && platform === 'windows';
+
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 overflow-hidden">
+    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 overflow-hidden">
+      {isWindows && <TitleBar />}
       
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-20">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-20">
         <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-700">
           <FontAwesomeIcon icon={faWallet} className="text-blue-600 dark:text-blue-400 text-2xl mr-3" />
           <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Bamiko</span>
@@ -53,6 +59,7 @@ export default function Layout() {
           <MobileNavItem to="/services" icon={faBuilding} label="Services" />
           <MobileNavItem to="/settings" icon={faCog} label="Paramètres" />
         </nav>
+      </div>
       </div>
     </div>
   );
