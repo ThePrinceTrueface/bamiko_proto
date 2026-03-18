@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationTriangle, faDownload, faUpload, faTrash, faMoon, faMoneyBill, faLock, faClock, faPercentage, faHashtag, faCloud, faCloudArrowUp, faCloudArrowDown, faSignOutAlt, faTable, faFileCsv } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationTriangle, faDownload, faUpload, faTrash, faMoon, faMoneyBill, faLock, faClock, faPercentage, faHashtag, faCloud, faCloudArrowUp, faCloudArrowDown, faSignOutAlt, faTable, faFileCsv, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import ConfirmModal from '../components/ConfirmModal';
 import PinPromptModal from '../components/PinPromptModal';
 import RestoreModal from '../components/RestoreModal';
 import { auth, logOut } from '../firebase';
 import { syncToCloud, syncFromCloud } from '../services/sync';
 import { convertToCSV, downloadCSV } from '../lib/export';
+import { generatePDFReport } from '../lib/pdfExport';
 
 export default function Settings() {
   const { services, banks, prospects, cards, transactions, settings, updateSettings } = useStore();
@@ -453,19 +454,27 @@ export default function Settings() {
         <div className="p-4 border-b border-slate-100 dark:border-slate-700">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center uppercase tracking-wider">
             <FontAwesomeIcon icon={faTable} className="mr-2 text-emerald-600" />
-            Exportation (Excel / CSV)
+            Exportation (PDF / Excel / CSV)
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Téléchargez vos données au format CSV pour les ouvrir dans Excel, faire votre comptabilité ou imprimer des reçus.
+            Téléchargez vos données pour les imprimer, les ouvrir dans Excel ou faire votre comptabilité.
           </p>
         </div>
         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+          <button
+            onClick={() => generatePDFReport(services, banks, prospects, cards, settings)}
+            className="w-full py-2.5 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 rounded-lg font-medium border border-slate-200 dark:border-slate-600 shadow-sm active:bg-slate-50 dark:active:bg-slate-600 transition-colors flex items-center justify-center text-sm"
+          >
+            <FontAwesomeIcon icon={faFilePdf} className="mr-2" />
+            Rapport complet (PDF)
+          </button>
+
           <button
             onClick={handleExportTransactionsCSV}
             className="w-full py-2.5 bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 rounded-lg font-medium border border-slate-200 dark:border-slate-600 shadow-sm active:bg-slate-50 dark:active:bg-slate-600 transition-colors flex items-center justify-center text-sm"
           >
             <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
-            Historique des transactions
+            Historique des transactions (CSV)
           </button>
           
           <button
@@ -473,7 +482,7 @@ export default function Settings() {
             className="w-full py-2.5 bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 rounded-lg font-medium border border-slate-200 dark:border-slate-600 shadow-sm active:bg-slate-50 dark:active:bg-slate-600 transition-colors flex items-center justify-center text-sm"
           >
             <FontAwesomeIcon icon={faFileCsv} className="mr-2" />
-            Liste des clients
+            Liste des clients (CSV)
           </button>
         </div>
       </div>

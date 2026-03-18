@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { formatCurrency, cn } from '../lib/utils';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCheckCircle, faMoneyBillWave, faRotateLeft, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faCheckCircle, faMoneyBillWave, faRotateLeft, faTrash, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
 import { faCircle } from '@fortawesome/free-regular-svg-icons';
 import { format, eachDayOfInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -61,6 +61,14 @@ export default function CardDetail() {
   }
   const clientAmount = totalAmount - commissionAmount;
 
+  let earlyCommissionAmount = 0;
+  if (settings?.commissionType === 'percentage') {
+    earlyCommissionAmount = (currentAmount * (settings.commissionValue || 0)) / 100;
+  } else {
+    earlyCommissionAmount = (settings?.commissionValue || 0) * card.installmentAmount;
+  }
+  const earlyClientAmount = Math.max(0, currentAmount - earlyCommissionAmount);
+
   // Generate chart data
   const startDate = startOfDay(card.createdAt);
   const endDate = endOfDay(Date.now());
@@ -96,6 +104,18 @@ export default function CardDetail() {
         title: 'Retirer la carte',
         message: `Confirmer le retrait pour ${prospect.name} ?\n\nMontant total : ${formatCurrency(totalAmount)}\nCommission : ${formatCurrency(commissionAmount)}\nÀ remettre au client : ${formatCurrency(clientAmount)}`,
         onConfirm: () => withdrawCard(card.id, commissionAmount),
+      });
+    }
+  };
+
+  const handleEarlyWithdraw = () => {
+    if (isActive && card.filledSlots > 0) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Retrait anticipé (Casse)',
+        message: `Le client souhaite récupérer son argent avant la fin.\n\nÉpargne actuelle : ${formatCurrency(currentAmount)}\nCommission : ${formatCurrency(earlyCommissionAmount)}\nÀ remettre au client : ${formatCurrency(earlyClientAmount)}\n\nCette action clôturera définitivement la carte.`,
+        isDestructive: true,
+        onConfirm: () => withdrawCard(card.id, earlyCommissionAmount),
       });
     }
   };
@@ -277,7 +297,7 @@ export default function CardDetail() {
       </div>
 
       {/* Actions */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-20 max-w-md mx-auto transition-colors duration-200 md:relative md:bottom-auto md:p-0 md:bg-transparent md:dark:bg-transparent md:border-none md:max-w-none md:mt-6 md:flex md:gap-4">
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-20 max-w-md mx-auto transition-colors duration-200 md:relative md:bottom-auto md:p-0 md:bg-transparent md:dark:bg-transparent md:border-none md:max-w-none md:mt-6 md:flex md:gap-4 md:flex-wrap">
         {isActive && (
           <button
             onClick={handleAddInstallment}
@@ -295,6 +315,16 @@ export default function CardDetail() {
           >
             <FontAwesomeIcon icon={faMoneyBillWave} className="mr-2" />
             Retirer {formatCurrency(totalAmount)}
+          </button>
+        )}
+
+        {isActive && card.filledSlots > 0 && (
+          <button
+            onClick={handleEarlyWithdraw}
+            className="w-full mt-2 py-2.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 rounded-xl font-semibold text-sm active:bg-amber-100 dark:active:bg-amber-900/40 transition-all flex items-center justify-center border border-amber-200 dark:border-amber-800/50 md:mt-0 md:flex-1 md:py-3.5"
+          >
+            <FontAwesomeIcon icon={faHandHoldingDollar} className="mr-2" />
+            Retrait anticipé (Casse)
           </button>
         )}
 

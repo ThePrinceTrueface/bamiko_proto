@@ -170,13 +170,14 @@ export const useStore = create<AppState>()(
       withdrawCard: (cardId, commissionAmount = 0) =>
         set((state) => {
           const card = state.cards.find((c) => c.id === cardId);
-          if (!card || card.status !== 'completed') return state;
+          if (!card || (card.status !== 'completed' && card.status !== 'active')) return state;
+          if (card.status === 'active' && card.filledSlots === 0) return state;
 
           const transaction: Transaction = {
             id: generateId(),
             cardId,
             type: 'withdrawal',
-            amount: card.installmentAmount * card.totalSlots,
+            amount: card.installmentAmount * card.filledSlots,
             date: Date.now(),
             updatedAt: Date.now(),
           };
