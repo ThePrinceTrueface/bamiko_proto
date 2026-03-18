@@ -107,7 +107,7 @@ export const generatePDFReport = (
             doc.text("Propulsé par ebinasoft", 14, pageHeight - 10);
             
             // Page number bottom center
-            const str = `Page ${doc.internal.getNumberOfPages()}`;
+            const str = `Page ${(doc as any).internal.getNumberOfPages()}`;
             doc.text(str, pageWidth / 2, pageHeight - 10, { align: 'center' });
           }
         });

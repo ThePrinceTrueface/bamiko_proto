@@ -148,34 +148,36 @@ export default function Dashboard() {
           <FontAwesomeIcon icon={faChartBar} className="mr-2 text-blue-500" />
           Revenus du mois ({format(now, 'MMMM yyyy', { locale: fr })})
         </h3>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-              <XAxis 
-                dataKey="dayNum" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fill: '#64748b' }} 
-                interval="preserveStartEnd"
-                minTickGap={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 10, fill: '#64748b' }}
-                tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value}
-              />
-              <Tooltip 
-                cursor={{ fill: '#f1f5f9', opacity: 0.5 }}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
-                formatter={(value: number) => [formatCurrency(value), 'Collecté']}
-                labelFormatter={(label, payload) => payload && payload.length > 0 ? payload[0].payload.date : label}
-                labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 600 }}
-              />
-              <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="h-64 w-full overflow-x-auto overflow-y-hidden custom-scrollbar" style={{ touchAction: 'pan-y' }}>
+          <div className="min-w-[600px] w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                <XAxis 
+                  dataKey="dayNum" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  interval="preserveStartEnd"
+                  minTickGap={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  tickFormatter={(value) => value >= 1000 ? `${value / 1000}k` : value}
+                />
+                <Tooltip 
+                  cursor={{ fill: '#f1f5f9', opacity: 0.5 }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                  formatter={(value: number) => [formatCurrency(value), 'Collecté']}
+                  labelFormatter={(label, payload) => payload && payload.length > 0 ? payload[0].payload.date : label}
+                  labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 600 }}
+                />
+                <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
